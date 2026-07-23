@@ -41,6 +41,20 @@ jobs:
           npm install --legacy-peer-deps
           npm run build --if-present
           npx cap sync android
+
+          # إصلاح تلقائي لخاصية Namespace في مكتبات Capacitor
+          python3 -c '
+          import glob
+          for p in glob.glob("node_modules/@capacitor/*/android/build.gradle"):
+              with open(p, "r") as f:
+                  content = f.read()
+              if "namespace" not in content and "android {" in content:
+                  name = p.split("/")[-3].replace("-", "_")
+                  new_content = content.replace("android {", f"android {{\n    namespace \"com.capacitor.{name}\"")
+                  with open(p, "w") as f:
+                      f.write(new_content)
+          '
+
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
