@@ -42,17 +42,24 @@ jobs:
           npm run build --if-present
           npx cap sync android
 
-          # إصلاح تلقائي لخاصية Namespace في مكتبات Capacitor
+          # إصلاح تلقائي لـ Namespace وحذف package من Manifest لمكتبات Capacitor
           python3 -c '
-          import glob
+          import glob, re
           for p in glob.glob("node_modules/@capacitor/*/android/build.gradle"):
               with open(p, "r") as f:
                   content = f.read()
               if "namespace" not in content and "android {" in content:
                   name = p.split("/")[-3].replace("-", "_")
-                  new_content = content.replace("android {", f"android {{\n    namespace \"com.capacitor.{name}\"")
+                  content = content.replace("android {", f"android {{\n    namespace \"com.capacitor.{name}\"")
                   with open(p, "w") as f:
-                      f.write(new_content)
+                      f.write(content)
+
+          for p in glob.glob("node_modules/@capacitor/*/android/src/main/AndroidManifest.xml"):
+              with open(p, "r") as f:
+                  content = f.read()
+              content = re.sub(r"package=\"[^\"]*\"", "", content)
+              with open(p, "w") as f:
+                  f.write(content)
           '
 
           cd android
