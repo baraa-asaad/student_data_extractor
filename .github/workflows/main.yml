@@ -42,24 +42,36 @@ jobs:
           npm run build --if-present
           npx cap sync android
 
-          # إصلاح تلقائي لـ Namespace وحذف package من Manifest لمكتبات Capacitor
+          # إصلاح تلقائي لـ Namespace والـ Manifest وتوافق أكواد Java لمكتبات Capacitor
           python3 -c '
           import glob, re
-          for p in glob.glob("node_modules/@capacitor/*/android/build.gradle"):
+
+          # 1. إصلاح Namespace والـ Manifest
+          for p in glob.glob("node_modules/@capacitor/*/android/build.gradle") + glob.glob("node_modules/@capacitor-community/*/android/build.gradle"):
               with open(p, "r") as f:
                   content = f.read()
               if "namespace" not in content and "android {" in content:
-                  name = p.split("/")[-3].replace("-", "_")
-                  content = content.replace("android {", f"android {{\n    namespace \"com.capacitor.{name}\"")
+                  pkg_name = p.split("/")[-3].replace("-", "_")
+                  content = content.replace("android {", f"android {{\n    namespace \"com.capacitor.{pkg_name}\"")
                   with open(p, "w") as f:
                       f.write(content)
 
-          for p in glob.glob("node_modules/@capacitor/*/android/src/main/AndroidManifest.xml"):
+          for p in glob.glob("node_modules/@capacitor/*/android/src/main/AndroidManifest.xml") + glob.glob("node_modules/@capacitor-community/*/android/src/main/AndroidManifest.xml"):
               with open(p, "r") as f:
                   content = f.read()
               content = re.sub(r"package=\"[^\"]*\"", "", content)
               with open(p, "w") as f:
                   f.write(content)
+
+          # 2. إصلاح الأكواد القديمة في ملفات Java لتتوافق مع الاصدار الحديث
+          for p in glob.glob("node_modules/@capacitor/**/*.java", recursive=True):
+              with open(p, "r") as f:
+                  content = f.read()
+              updated = content.replace("import com.getcapacitor.PluginRequestCodes;", "// import com.getcapacitor.PluginRequestCodes;")
+              updated = re.sub(r"(\b\w+Call)\.error\(", r"\1.reject(", updated)
+              if updated != content:
+                  with open(p, "w") as f:
+                      f.write(updated)
           '
 
           cd android
