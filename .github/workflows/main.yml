@@ -15,7 +15,16 @@ jobs:
 
       - name: Unzip Project File
         run: |
-          unzip student_data_extractor_complete.zip
+          unzip -o student_data_extractor_complete.zip
+          # البحث تلقائياً عن مجلد package.json ونقل محتوياته للمجلد الرئيسي
+          PKG_PATH=$(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1)
+          if [ -n "$PKG_PATH" ]; then
+            PKG_DIR=$(dirname "$PKG_PATH")
+            if [ "$PKG_DIR" != "." ]; then
+              echo "Moving files from $PKG_DIR to root..."
+              cp -rn $PKG_DIR/* .
+            fi
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
